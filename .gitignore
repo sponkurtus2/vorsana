@@ -1,0 +1,17 @@
+# Rust
+target/
+
+# Node / Astro
+node_modules/
+dist/
+.astro/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# System
+.DS_Store
+
+./proyect.md

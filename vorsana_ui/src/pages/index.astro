@@ -1,0 +1,1049 @@
+---
+/**
+ * Main entry point for the application.
+ * Features an informative, minimalist UI with theme toggling (Light/Dark).
+ * Context: AI vs. Human voice identification.
+ */
+import Layout from "../layouts/Layout.astro";
+
+const API_URL = import.meta.env.PUBLIC_API_URL ?? "http://127.0.0.1:3000";
+const WS_URL = import.meta.env.PUBLIC_WS_URL ?? "ws://127.0.0.1:3000/ws";
+---
+
+<Layout title="Vorsana - Detección de Voz IA">
+	<div class="absolute top-6 right-6 z-50">
+		<button
+			id="theme-toggle"
+			class="p-2.5 rounded-full bg-stone-200/50 dark:bg-zinc-800/50 border border-stone-300/50 dark:border-zinc-700/50 text-stone-600 dark:text-zinc-400 hover:bg-stone-300/50 dark:hover:bg-zinc-700 transition-all duration-300 focus:outline-none"
+			aria-label="Toggle Dark Mode"
+		>
+			<svg
+				id="theme-toggle-light-icon"
+				class="hidden w-5 h-5"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+				xmlns="http://www.w3.org/2000/svg"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="1.5"
+					d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+				></path>
+			</svg>
+			<svg
+				id="theme-toggle-dark-icon"
+				class="hidden w-5 h-5"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+				xmlns="http://www.w3.org/2000/svg"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="1.5"
+					d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+				></path>
+			</svg>
+		</button>
+	</div>
+
+	<div
+		class="fixed inset-0 z-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-stone-50 to-stone-100 dark:from-emerald-900/15 dark:via-zinc-950 dark:to-zinc-950 transition-colors duration-500"
+	>
+	</div>
+
+	<div
+		class="fixed inset-0 z-0 pointer-events-none bg-[radial-gradient(#10b981_2px,transparent_2px)] dark:bg-[radial-gradient(#34d399_2px,transparent_2px)] [background-size:32px_32px] opacity-[0.25] dark:opacity-[0.15] [mask-image:radial-gradient(ellipse_70%_70%_at_50%_50%,#000_20%,transparent_100%)] transition-opacity duration-500"
+	>
+	</div>
+
+	<main
+		class="relative z-10 flex-grow flex flex-col items-center justify-center gap-6 p-4 md:p-6 w-full max-w-4xl mx-auto min-h-screen"
+	>
+		<header class="text-center space-y-3 max-w-xl mx-auto px-4">
+			<h1
+				class="text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tighter text-stone-800 dark:text-zinc-100 transition-colors"
+			>
+				Vorsana
+			</h1>
+			<p
+				class="text-stone-500 dark:text-zinc-400 text-sm sm:text-base md:text-lg font-light tracking-wide leading-relaxed text-balance transition-colors"
+			>
+				Escanea una voz con el micrófono o sube un audio para revisar si parece
+				humana o generada por IA.
+			</p>
+		</header>
+
+		<div
+			class="relative flex items-center justify-center w-56 h-56 sm:w-64 sm:h-64 mt-4 md:mt-2"
+		>
+			<div
+				id="ripple-outer"
+				class="absolute inset-0 rounded-full border-2 border-emerald-400/40 dark:border-emerald-300/20 opacity-0 pointer-events-none transition-colors"
+			>
+			</div>
+			<div
+				id="ripple-inner"
+				class="absolute inset-4 rounded-full bg-emerald-400/10 dark:bg-emerald-300/10 scale-50 opacity-0 transition-all duration-500 pointer-events-none"
+			>
+			</div>
+
+			<button
+				id="record-btn"
+				class="relative z-10 flex items-center justify-center w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-b from-white to-emerald-50/50 dark:from-zinc-900 dark:to-[#09090b] border border-emerald-200 dark:border-zinc-800/80 shadow-[0_8px_30px_-4px_rgba(16,185,129,0.25)] dark:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.6)] transition-all duration-500 hover:bg-emerald-50 dark:hover:bg-zinc-900 hover:border-emerald-300 hover:border-emerald-400/30 dark:hover:border-emerald-400/30 hover:shadow-[0_12px_40px_-4px_rgba(16,185,129,0.35)] dark:hover:shadow-[0_12px_40px_-4px_rgba(52,211,153,0.1)] hover:-translate-y-1 active:translate-y-0 active:scale-95 focus:outline-none group cursor-pointer"
+				aria-label="Iniciar captura de audio"
+			>
+				<svg
+					class="w-10 h-10 sm:w-14 sm:h-14 text-emerald-600/70 dark:text-zinc-500 transition-all duration-500 group-hover:text-emerald-500 dark:group-hover:text-emerald-300"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					xmlns="http://www.w3.org/2000/svg"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="1.2"
+						d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+					></path>
+				</svg>
+			</button>
+		</div>
+
+		<div class="flex flex-col items-center gap-3 h-10">
+			<div
+				id="visualizer"
+				class="flex items-center gap-1.5 opacity-0 transition-opacity duration-300 hidden"
+			>
+				<div
+					class="w-1.5 h-3 bg-emerald-500 dark:bg-emerald-400 rounded-full animate-[bounce_1s_infinite_100ms] transition-colors"
+				>
+				</div>
+				<div
+					class="w-1.5 h-6 bg-emerald-400 dark:bg-emerald-300 rounded-full animate-[bounce_1s_infinite_200ms] transition-colors"
+				>
+				</div>
+				<div
+					class="w-1.5 h-8 bg-emerald-300 dark:bg-emerald-200 rounded-full animate-[bounce_1s_infinite_300ms] transition-colors"
+				>
+				</div>
+				<div
+					class="w-1.5 h-5 bg-emerald-400 dark:bg-emerald-300 rounded-full animate-[bounce_1s_infinite_400ms] transition-colors"
+				>
+				</div>
+				<div
+					class="w-1.5 h-3 bg-emerald-500 dark:bg-emerald-400 rounded-full animate-[bounce_1s_infinite_500ms] transition-colors"
+				>
+				</div>
+			</div>
+
+			<span
+				id="status-text"
+				class="text-xs text-stone-400 dark:text-zinc-500 font-medium tracking-widest uppercase transition-opacity duration-300"
+			>
+				Microfono apagado
+			</span>
+		</div>
+
+		<div
+			id="result-card"
+			class="w-full max-w-md mx-auto bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xl border border-stone-200/80 dark:border-zinc-800/80 rounded-3xl p-5 sm:p-6 flex flex-col gap-5 transition-all duration-300 shadow-[0_18px_60px_-30px_rgba(0,0,0,0.35)] dark:shadow-[0_18px_60px_-30px_rgba(0,0,0,0.9)]"
+		>
+			<div class="flex items-center justify-between gap-4">
+				<div class="flex flex-col gap-1">
+					<span
+						id="result-eyebrow"
+						class="text-[10px] font-bold uppercase tracking-[0.22em] text-stone-400 dark:text-zinc-500"
+					>
+						Resultado
+					</span>
+					<h2
+						id="result-title"
+						class="text-xl sm:text-2xl font-semibold tracking-tight text-stone-800 dark:text-zinc-100"
+					>
+						Aún no hay audio
+					</h2>
+				</div>
+
+				<div
+					id="result-orb"
+					class="w-14 h-14 rounded-full bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 flex items-center justify-center text-stone-400 dark:text-zinc-500 transition-all duration-300"
+				>
+					<svg
+						id="result-icon-idle"
+						class="w-7 h-7"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+						xmlns="http://www.w3.org/2000/svg"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="1.6"
+							d="M12 18.75a6.75 6.75 0 100-13.5 6.75 6.75 0 000 13.5z"></path>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="1.6"
+							d="M12 9v3.75l2.25 1.5"></path>
+					</svg>
+				</div>
+			</div>
+
+			<p
+				id="result-description"
+				class="text-sm leading-relaxed text-stone-500 dark:text-zinc-400"
+			>
+				Usa el micrófono o sube un audio. Cuando termine el análisis, verás aquí
+				el resultado.
+			</p>
+
+			<div class="space-y-2">
+				<div class="flex items-center justify-between text-xs">
+					<span class="text-stone-500 dark:text-zinc-400">Señal de IA</span>
+					<span
+						id="result-score"
+						class="font-mono font-semibold text-stone-700 dark:text-zinc-200"
+					>
+						--%
+					</span>
+				</div>
+
+				<div
+					class="h-2.5 rounded-full bg-stone-100 dark:bg-zinc-900 overflow-hidden border border-stone-200/70 dark:border-zinc-800/80"
+				>
+					<div
+						id="result-score-bar"
+						class="h-full w-0 rounded-full bg-stone-300 dark:bg-zinc-700 transition-all duration-700 ease-out"
+					>
+					</div>
+				</div>
+
+				<div
+					class="flex items-center justify-between text-[10px] font-medium uppercase tracking-widest text-stone-400 dark:text-zinc-600"
+				>
+					<span>Humana</span>
+					<span>Incierto</span>
+					<span>IA</span>
+				</div>
+			</div>
+			<div
+				class="rounded-2xl bg-stone-50/80 dark:bg-zinc-900/70 border border-stone-200/80 dark:border-zinc-800/80 p-4"
+			>
+				<span
+					class="block text-[10px] uppercase tracking-widest text-stone-400 dark:text-zinc-500 font-bold"
+				>
+					Lectura
+				</span>
+				<span
+					id="result-confidence"
+					class="block mt-1 text-sm font-semibold text-stone-700 dark:text-zinc-200"
+				>
+					--
+				</span>
+				<span id="result-segments" class="hidden"> -- </span>
+			</div>
+		</div>
+
+		<div class="flex flex-col items-center mt-2 mb-4">
+			<label
+				for="audio-upload"
+				class="group flex items-center gap-2.5 px-6 py-2.5 rounded-full bg-white dark:bg-zinc-900/50 border border-stone-200 dark:border-zinc-800 text-sm font-medium text-stone-600 dark:text-zinc-400 cursor-pointer shadow-sm hover:shadow dark:shadow-none hover:border-emerald-300 hover:border-emerald-800/60 hover:text-emerald-600 dark:hover:text-emerald-400 hover:-translate-y-0.5 transition-all duration-300 focus-within:ring-2 focus-within:ring-emerald-500/30"
+			>
+				<svg
+					class="w-4 h-4 transition-transform duration-300 group-hover:-translate-y-0.5"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+					xmlns="http://www.w3.org/2000/svg"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="1.5"
+						d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+					></path>
+				</svg>
+				Subir archivo de audio
+				<input id="audio-upload" type="file" accept="audio/*" class="sr-only" />
+			</label>
+		</div>
+
+		<div
+			class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mt-8 md:mt-4 w-full border-t border-stone-200/60 dark:border-zinc-800/40 pt-6 md:pt-8 transition-colors"
+		>
+			<div
+				class="group flex flex-col items-center text-center gap-3 sm:gap-4 bg-white/60 dark:bg-[#0f0f11]/60 backdrop-blur-md px-4 sm:px-5 py-5 sm:py-6 rounded-3xl border border-stone-100 dark:border-zinc-800/60 shadow-sm hover:shadow-md dark:shadow-none transition-all duration-300"
+			>
+				<div
+					class="w-8 h-8 rounded-full bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 flex items-center justify-center text-stone-500 dark:text-zinc-400 text-sm font-medium transition-colors group-hover:scale-110 group-hover:border-emerald-200 dark:group-hover:border-emerald-800/50"
+				>
+					1
+				</div>
+				<div class="space-y-1.5">
+					<h3
+						class="text-stone-800 dark:text-zinc-200 text-sm font-semibold tracking-wide transition-colors"
+					>
+						Elige un audio
+					</h3>
+					<p
+						class="text-stone-500 dark:text-zinc-400 text-xs leading-relaxed text-balance transition-colors"
+					>
+						Usa el micrófono o sube un archivo de audio.
+					</p>
+				</div>
+			</div>
+
+			<div
+				class="group flex flex-col items-center text-center gap-3 sm:gap-4 bg-white/60 dark:bg-[#0f0f11]/60 backdrop-blur-md px-4 sm:px-5 py-5 sm:py-6 rounded-3xl border border-stone-100 dark:border-zinc-800/60 shadow-sm hover:shadow-md dark:shadow-none transition-all duration-300"
+			>
+				<div
+					class="w-8 h-8 rounded-full bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 flex items-center justify-center text-stone-500 dark:text-zinc-400 text-sm font-medium transition-colors group-hover:scale-110 group-hover:border-emerald-200 dark:group-hover:border-emerald-800/50"
+				>
+					2
+				</div>
+				<div class="space-y-1.5">
+					<h3
+						class="text-stone-800 dark:text-zinc-200 text-sm font-semibold tracking-wide transition-colors"
+					>
+						Revisión
+					</h3>
+					<p
+						class="text-stone-500 dark:text-zinc-400 text-xs leading-relaxed text-balance transition-colors"
+					>
+						Vorsana revisa la voz y compara señales que suelen cambiar entre una
+						voz humana y una generada por IA.
+					</p>
+				</div>
+			</div>
+
+			<div
+				class="group flex flex-col items-center text-center gap-3 sm:gap-4 bg-white/60 dark:bg-[#0f0f11]/60 backdrop-blur-md px-4 sm:px-5 py-5 sm:py-6 rounded-3xl border border-stone-100 dark:border-zinc-800/60 shadow-sm hover:shadow-md dark:shadow-none transition-all duration-300"
+			>
+				<div
+					class="w-8 h-8 rounded-full bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 flex items-center justify-center text-stone-500 dark:text-zinc-400 text-sm font-medium transition-colors group-hover:scale-110 group-hover:border-emerald-200 dark:group-hover:border-emerald-800/50"
+				>
+					3
+				</div>
+				<div class="space-y-1.5">
+					<h3
+						class="text-stone-800 dark:text-zinc-200 text-sm font-semibold tracking-wide transition-colors"
+					>
+						Resultado
+					</h3>
+					<p
+						class="text-stone-500 dark:text-zinc-400 text-xs leading-relaxed text-balance transition-colors"
+					>
+						Te muestra si la voz parece humana, generada por IA o si el
+						resultado no es claro.
+					</p>
+				</div>
+			</div>
+		</div>
+	</main>
+
+	<div
+		id="voice-toast"
+		class="fixed bottom-6 right-6 z-50 flex items-center gap-4 p-4 rounded-2xl shadow-2xl border bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-stone-200 dark:border-zinc-850 max-w-sm pointer-events-none opacity-0 translate-y-4 transition-all duration-300"
+	>
+		<div
+			id="toast-icon-bg"
+			class="p-2.5 bg-stone-100 dark:bg-zinc-900 rounded-xl text-stone-400 dark:text-zinc-500 transition-colors duration-300"
+		>
+			<svg
+				id="icon-scanning"
+				class="w-5 h-5 animate-spin hidden"
+				fill="none"
+				viewBox="0 0 24 24"
+				><circle
+					class="opacity-25"
+					cx="12"
+					cy="12"
+					r="10"
+					stroke="currentColor"
+					stroke-width="4"></circle><path
+					class="opacity-75"
+					fill="currentColor"
+					d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+				></path></svg
+			>
+			<svg
+				id="icon-secured"
+				class="w-5 h-5"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+				><path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-16.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+				></path></svg
+			>
+		</div>
+
+		<div class="flex-1 flex flex-col justify-center min-w-[200px]">
+			<span
+				id="toast-title"
+				class="text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500"
+				>Analizador</span
+			>
+			<h3
+				id="toast-message"
+				class="text-sm font-semibold text-stone-700 dark:text-zinc-300 mt-0.5"
+			>
+				Estableciendo puente...
+			</h3>
+		</div>
+	</div>
+
+	<script define:vars={{ API_URL, WS_URL }}>
+		window.VORSANA_API_URL = API_URL;
+		window.VORSANA_WS_URL = WS_URL;
+	</script>
+	<script>
+		const themeToggleBtn = document.getElementById("theme-toggle");
+		const darkIcon = document.getElementById("theme-toggle-dark-icon");
+		const lightIcon = document.getElementById("theme-toggle-light-icon");
+
+		const UI_AI_THRESHOLD = 0.44;
+		const UI_UNCERTAIN_MARGIN = 0.003;
+
+		const syncIcons = () => {
+			const isDark = document.documentElement.classList.contains("dark");
+			if (isDark) {
+				darkIcon?.classList.add("hidden");
+				lightIcon?.classList.remove("hidden");
+			} else {
+				darkIcon?.classList.remove("hidden");
+				lightIcon?.classList.add("hidden");
+			}
+		};
+
+		if (themeToggleBtn && darkIcon && lightIcon) {
+			syncIcons();
+			themeToggleBtn.addEventListener("click", () => {
+				const isDark = document.documentElement.classList.contains("dark");
+				if (isDark) {
+					document.documentElement.classList.remove("dark");
+					localStorage.setItem("theme", "light");
+				} else {
+					document.documentElement.classList.add("dark");
+					localStorage.setItem("theme", "dark");
+				}
+				syncIcons();
+			});
+		}
+
+		// 2. LOGICA DEL CAPTURADOR DE AUDIO Y WEBSOCKET (AUTOMÁTICO)
+		const recordBtn = document.getElementById("record-btn");
+		const rippleOuter = document.getElementById("ripple-outer");
+		const rippleInner = document.getElementById("ripple-inner");
+		const visualizer = document.getElementById("visualizer");
+		const statusText = document.getElementById("status-text");
+
+		// Nodos del Toast flotante
+		const toast = document.getElementById("voice-toast") as HTMLDivElement;
+		const toastTitle = document.getElementById(
+			"toast-title",
+		) as HTMLSpanElement;
+		const toastMessage = document.getElementById(
+			"toast-message",
+		) as HTMLHeadingElement;
+		const toastIconBg = document.getElementById(
+			"toast-icon-bg",
+		) as HTMLDivElement;
+		const iconScanning = document.getElementById("icon-scanning") as SVGElement;
+		const iconSecured = document.getElementById("icon-secured") as SVGElement;
+
+		const resultEyebrow = document.getElementById(
+			"result-eyebrow",
+		) as HTMLSpanElement;
+		const resultTitle = document.getElementById(
+			"result-title",
+		) as HTMLHeadingElement;
+		const resultDescription = document.getElementById(
+			"result-description",
+		) as HTMLParagraphElement;
+		const resultScore = document.getElementById(
+			"result-score",
+		) as HTMLSpanElement;
+		const resultScoreBar = document.getElementById(
+			"result-score-bar",
+		) as HTMLDivElement;
+		const resultConfidence = document.getElementById(
+			"result-confidence",
+		) as HTMLSpanElement;
+		const resultSegments = document.getElementById(
+			"result-segments",
+		) as HTMLSpanElement;
+		const resultOrb = document.getElementById("result-orb") as HTMLDivElement;
+
+		let isRecording = false;
+		let ws: WebSocket | null = null;
+		let audioContext: AudioContext | null = null;
+		let mediaStream: MediaStream | null = null;
+		let processorNode: ScriptProcessorNode | null = null;
+
+		if (recordBtn && rippleOuter && rippleInner && visualizer && statusText) {
+			recordBtn.addEventListener("click", async () => {
+				isRecording = !isRecording;
+
+				if (isRecording) {
+					await startAudioPipeline();
+				} else {
+					stopAudioPipeline();
+				}
+			});
+		}
+
+		type VoiceUiClassification = "human" | "ai" | "uncertain";
+
+		function classifyVoiceForUi(probabilityAi: number): VoiceUiClassification {
+			const distanceFromThreshold = Math.abs(probabilityAi - UI_AI_THRESHOLD);
+
+			if (distanceFromThreshold <= UI_UNCERTAIN_MARGIN) {
+				return "uncertain";
+			}
+
+			return probabilityAi >= UI_AI_THRESHOLD ? "ai" : "human";
+		}
+		function resetResultCard() {
+			if (
+				!resultEyebrow ||
+				!resultTitle ||
+				!resultDescription ||
+				!resultScore ||
+				!resultScoreBar ||
+				!resultConfidence ||
+				!resultSegments ||
+				!resultOrb
+			) {
+				return;
+			}
+
+			resultEyebrow.textContent = "Resultado";
+			resultTitle.textContent = "Aún no hay audio";
+			resultDescription.textContent =
+				"Usa el micrófono o sube un audio. Cuando termine el análisis, verás aquí el resultado.";
+			resultScore.textContent = "--%";
+			resultScoreBar.style.width = "0%";
+			resultScoreBar.className =
+				"h-full w-0 rounded-full bg-stone-300 dark:bg-zinc-700 transition-all duration-700 ease-out";
+			resultConfidence.textContent = "--";
+			resultSegments.textContent = "--";
+			resultOrb.className =
+				"w-14 h-14 rounded-full bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 flex items-center justify-center text-stone-400 dark:text-zinc-500 transition-all duration-300";
+		}
+
+		function setResultLoading(message: string) {
+			if (
+				!resultEyebrow ||
+				!resultTitle ||
+				!resultDescription ||
+				!resultScoreBar ||
+				!resultOrb
+			) {
+				return;
+			}
+
+			resultEyebrow.textContent = "Revisando";
+			resultTitle.textContent = "Analizando audio...";
+			resultDescription.textContent = message;
+			resultScoreBar.style.width = "35%";
+			resultScoreBar.className =
+				"h-full rounded-full bg-amber-400 dark:bg-amber-500 transition-all duration-700 ease-out animate-pulse";
+			resultOrb.className =
+				"w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 flex items-center justify-center text-amber-600 dark:text-amber-400 transition-all duration-300 animate-pulse";
+		}
+
+		function updateResultCardFromAnalyze(result: any) {
+			if (
+				!resultEyebrow ||
+				!resultTitle ||
+				!resultDescription ||
+				!resultScore ||
+				!resultScoreBar ||
+				!resultConfidence ||
+				!resultSegments ||
+				!resultOrb
+			) {
+				return;
+			}
+
+			const probabilityAi = Number(result.probability_ai);
+			const confidenceMargin = Number(result.confidence_margin ?? 0);
+			const segments = Number(result.segments_analyzed ?? 0);
+			const uiClassification = classifyVoiceForUi(probabilityAi);
+
+			const scorePercent = Math.max(0, Math.min(100, probabilityAi * 100));
+			resultScore.textContent = `${scorePercent.toFixed(2)}%`;
+			resultScoreBar.style.width = `${scorePercent}%`;
+			resultSegments.textContent = `${segments}`;
+
+			if (confidenceMargin < 0.005) {
+				resultConfidence.textContent = "Resultado muy ajustado.";
+			} else if (confidenceMargin < 0.015) {
+				resultConfidence.textContent = "Resultado débil, pero usable.";
+			} else if (confidenceMargin < 0.035) {
+				resultConfidence.textContent = "Resultado moderado.";
+			} else {
+				resultConfidence.textContent = "Resultado claro.";
+			}
+
+			if (uiClassification === "ai") {
+				resultEyebrow.textContent = "Resultado";
+				resultTitle.textContent = "Parece una voz de IA";
+				resultDescription.textContent =
+					"El audio tiene señales que se parecen más a una voz generada por IA.";
+				resultScoreBar.className =
+					"h-full rounded-full bg-red-500 dark:bg-red-500 transition-all duration-700 ease-out";
+				resultOrb.className =
+					"w-14 h-14 rounded-full bg-red-100 dark:bg-red-950/50 border border-red-200 dark:border-red-900/40 flex items-center justify-center text-red-600 dark:text-red-400 transition-all duration-300 shadow-[0_0_28px_-8px_rgba(239,68,68,0.7)]";
+				return;
+			}
+
+			if (uiClassification === "human") {
+				resultEyebrow.textContent = "Resultado";
+				resultTitle.textContent = "Parece una voz humana";
+				resultDescription.textContent =
+					"El audio tiene señales que se parecen más a una voz humana.";
+				resultScoreBar.className =
+					"h-full rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-700 ease-out";
+				resultOrb.className =
+					"w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 transition-all duration-300 shadow-[0_0_28px_-8px_rgba(16,185,129,0.7)]";
+				return;
+			}
+
+			resultEyebrow.textContent = "Resultado";
+			resultTitle.textContent = "No está claro";
+			resultDescription.textContent =
+				"El audio quedó muy cerca del límite. Prueba con una voz más clara o un audio más largo.";
+			resultScoreBar.className =
+				"h-full rounded-full bg-amber-400 dark:bg-amber-500 transition-all duration-700 ease-out";
+			resultOrb.className =
+				"w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 flex items-center justify-center text-amber-600 dark:text-amber-400 transition-all duration-300 shadow-[0_0_28px_-8px_rgba(245,158,11,0.65)]";
+		}
+
+		function handleServerMessage(data: string) {
+			updateToastLive(data);
+			updateResultCardFromLiveMessage(data);
+		}
+
+		function updateResultCardFromLiveMessage(message: string) {
+			const percentageMatch = message.match(/\(([\d.]+)%\)/);
+
+			if (!percentageMatch) {
+				return;
+			}
+
+			const displayedProbability = Number(percentageMatch[1]) / 100;
+
+			let probabilityAi: number;
+			let probabilityHuman: number;
+
+			if (message.includes("AI Voice")) {
+				probabilityAi = displayedProbability;
+				probabilityHuman = 1 - displayedProbability;
+			} else if (message.includes("Human Voice")) {
+				probabilityHuman = displayedProbability;
+				probabilityAi = 1 - displayedProbability;
+			} else {
+				return;
+			}
+
+			const threshold = UI_AI_THRESHOLD;
+			const confidenceMargin = Math.abs(probabilityAi - threshold);
+
+			updateResultCardFromAnalyze({
+				label: probabilityAi >= threshold ? "ai" : "human",
+				probability_ai: probabilityAi,
+				probability_human: probabilityHuman,
+				threshold,
+				confidence_margin: confidenceMargin,
+				segments_analyzed: 1,
+			});
+		}
+
+		async function startAudioPipeline() {
+			if (
+				!recordBtn ||
+				!rippleOuter ||
+				!rippleInner ||
+				!visualizer ||
+				!statusText
+			)
+				return;
+			const icon = recordBtn.querySelector("svg");
+			const isDark = document.documentElement.classList.contains("dark");
+
+			showToast("Preparando el micrófono...", "procesando");
+			setResultLoading("Escuchando la voz para revisarla.");
+
+			// ws = new WebSocket("ws://127.0.0.1:3000/ws");
+			ws = new WebSocket(WS_URL);
+			ws.binaryType = "arraybuffer";
+
+			ws.onopen = async () => {
+				try {
+					mediaStream = await navigator.mediaDevices.getUserMedia({
+						audio: {
+							echoCancellation: true,
+							noiseSuppression: true,
+							autoGainControl: false,
+						},
+					});
+
+					audioContext = new AudioContext();
+					const source = audioContext.createMediaStreamSource(mediaStream);
+					processorNode = audioContext.createScriptProcessor(4096, 1, 1);
+
+					processorNode.onaudioprocess = (e) => {
+						if (ws && ws.readyState === WebSocket.OPEN) {
+							const inputData = e.inputBuffer.getChannelData(0);
+							ws.send(inputData.buffer);
+						}
+					};
+
+					source.connect(processorNode);
+					processorNode.connect(audioContext.destination);
+
+					rippleOuter.classList.replace("opacity-0", "opacity-100");
+					rippleOuter.classList.add(
+						"animate-[ping_2.5s_cubic-bezier(0,0,0.2,1)_infinite]",
+					);
+					rippleInner.classList.replace("scale-50", "scale-110");
+					rippleInner.classList.replace("opacity-0", "opacity-100");
+					rippleInner.classList.add("animate-pulse");
+
+					if (icon) {
+						if (isDark) {
+							icon.classList.replace(
+								"dark:text-zinc-500",
+								"dark:text-emerald-300",
+							);
+							icon.classList.add("drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]");
+						} else {
+							icon.classList.replace("text-emerald-600/70", "text-emerald-500");
+							icon.classList.add("drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]");
+						}
+					}
+
+					visualizer.classList.remove("hidden");
+					setTimeout(
+						() => visualizer.classList.replace("opacity-0", "opacity-100"),
+						10,
+					);
+					statusText.classList.add("text-emerald-500", "dark:text-emerald-400");
+					statusText.textContent = "Escuchando...";
+
+					showToast("Analizando la voz...", "escaneando");
+				} catch (err) {
+					console.error(err);
+					showToast("Permiso de micrófono denegado", "error");
+					stopAudioPipeline();
+				}
+			};
+
+			ws.onmessage = (event) => {
+				if (typeof event.data === "string") {
+					handleServerMessage(event.data);
+				}
+			};
+
+			ws.onerror = () => {
+				showToast("Error de comunicación de red", "error");
+				stopAudioPipeline();
+			};
+
+			ws.onclose = () => {
+				if (isRecording) stopAudioPipeline();
+			};
+		}
+
+		function stopAudioPipeline() {
+			isRecording = false;
+
+			if (
+				!recordBtn ||
+				!rippleOuter ||
+				!rippleInner ||
+				!visualizer ||
+				!statusText
+			)
+				return;
+			const icon = recordBtn.querySelector("svg");
+			const isDark = document.documentElement.classList.contains("dark");
+
+			if (processorNode) {
+				processorNode.disconnect();
+				processorNode = null;
+			}
+			if (audioContext) {
+				audioContext.close();
+				audioContext = null;
+			}
+			if (mediaStream) {
+				mediaStream.getTracks().forEach((track) => track.stop());
+				mediaStream = null;
+			}
+			if (ws) {
+				ws.close();
+				ws = null;
+			}
+
+			rippleOuter.classList.replace("opacity-100", "opacity-0");
+			rippleOuter.classList.remove(
+				"animate-[ping_2.5s_cubic-bezier(0,0,0.2,1)_infinite]",
+			);
+			rippleInner.classList.replace("scale-110", "scale-50");
+			rippleInner.classList.replace("opacity-100", "opacity-0");
+			rippleInner.classList.remove("animate-pulse");
+
+			if (icon) {
+				if (isDark) {
+					icon.classList.replace("dark:text-emerald-300", "dark:text-zinc-500");
+					icon.classList.remove("drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]");
+				} else {
+					icon.classList.replace("text-emerald-500", "text-emerald-600/70");
+					icon.classList.remove("drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]");
+				}
+			}
+
+			visualizer.classList.replace("opacity-100", "opacity-0");
+			setTimeout(() => visualizer.classList.add("hidden"), 300);
+			statusText.classList.remove("text-emerald-500", "dark:text-emerald-400");
+			statusText.textContent = "Microfono apagado";
+
+			hideToast();
+		}
+
+		function showToast(
+			message: string,
+			mode: "procesando" | "escaneando" | "error",
+		) {
+			if (!toast) return;
+			toastMessage.textContent = message;
+			toast.classList.remove(
+				"opacity-0",
+				"translate-y-4",
+				"pointer-events-none",
+			);
+
+			if (mode === "procesando" || mode === "escaneando") {
+				toastTitle.textContent = "Analizando";
+				toastTitle.className =
+					"text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500";
+				toastIconBg.className =
+					"p-2.5 bg-stone-100 dark:bg-zinc-900 rounded-xl text-amber-500";
+				iconSecured.classList.add("hidden");
+				iconScanning.classList.remove("hidden");
+			} else {
+				toastTitle.textContent = "Algo salió mal";
+				toastTitle.className =
+					"text-[10px] font-bold uppercase tracking-widest text-red-500 dark:text-red-400";
+				toastIconBg.className =
+					"p-2.5 bg-red-100 dark:bg-red-950/40 rounded-xl text-red-500 dark:text-red-400";
+				iconScanning.classList.add("hidden");
+				iconSecured.classList.remove("hidden");
+			}
+		}
+
+		function hideToast() {
+			toast?.classList.add("opacity-0", "translate-y-4", "pointer-events-none");
+		}
+
+		function updateToastLive(serverMessage: string) {
+			if (
+				!toast ||
+				!iconScanning ||
+				!iconSecured ||
+				!toastTitle ||
+				!toastMessage ||
+				!toastIconBg
+			)
+				return;
+
+			iconScanning.classList.add("hidden");
+			iconSecured.classList.remove("hidden");
+
+			if (serverMessage.includes("Uncertain")) {
+				toastTitle.className =
+					"text-[10px] font-bold uppercase tracking-widest text-amber-500 dark:text-amber-400";
+				toastTitle.textContent = "NO ESTÁ CLARO";
+				toastMessage.textContent = "Prueba con una voz más clara";
+				toastMessage.className =
+					"text-sm font-bold text-amber-600 dark:text-amber-400";
+				toastIconBg.className =
+					"p-2.5 bg-amber-100 dark:bg-amber-950/40 rounded-xl text-amber-500 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30";
+				toast.className =
+					"fixed bottom-6 right-6 z-50 flex items-center gap-4 p-4 rounded-2xl shadow-2xl border bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-amber-200 dark:border-amber-900/40 max-w-sm transition-all duration-300";
+				return;
+			}
+
+			if (serverMessage.includes("AI Voice")) {
+				toastTitle.className =
+					"text-[10px] font-bold uppercase tracking-widest text-red-500 dark:text-red-400 animate-pulse";
+				toastTitle.textContent = "POSIBLE VOZ DE IA";
+				toastMessage.textContent = "El audio se parece a una voz generada";
+				toastMessage.className =
+					"text-sm font-bold text-red-600 dark:text-red-400";
+				toastIconBg.className =
+					"p-2.5 bg-red-100 dark:bg-red-950/50 rounded-xl text-red-500 dark:text-red-400 border border-red-200 dark:border-red-900/30";
+				toast.className =
+					"fixed bottom-6 right-6 z-50 flex items-center gap-4 p-4 rounded-2xl shadow-2xl border bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-red-200 dark:border-red-900/40 max-w-sm transition-all duration-300";
+			} else {
+				toastTitle.className =
+					"text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400";
+				toastTitle.textContent = "PARECE HUMANA";
+				toastMessage.textContent = "El audio se parece a una voz humana";
+				toastMessage.className =
+					"text-sm font-bold text-emerald-600 dark:text-emerald-400";
+				toastIconBg.className =
+					"p-2.5 bg-emerald-100 dark:bg-emerald-950/40 rounded-xl text-emerald-500 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/20";
+				toast.className =
+					"fixed bottom-6 right-6 z-50 flex items-center gap-4 p-4 rounded-2xl shadow-2xl border bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-emerald-200 dark:border-emerald-900/30 max-w-sm transition-all duration-300";
+			}
+		}
+
+		const audioInput = document.getElementById(
+			"audio-upload",
+		) as HTMLInputElement | null;
+
+		if (audioInput) {
+			audioInput.addEventListener("change", async (event) => {
+				const target = event.target as HTMLInputElement | null;
+
+				if (!target || !target.files || target.files.length === 0) {
+					return;
+				}
+
+				const file = target.files[0];
+
+				// Apagamos cualquier micrófono activo para evitar colisiones.
+				stopAudioPipeline();
+
+				showToast(`Cargando audio: ${file.name}`, "procesando");
+
+				if (statusText) {
+					statusText.classList.add("text-emerald-500", "dark:text-emerald-400");
+					statusText.textContent = "Preparando audio...";
+				}
+
+				try {
+					const localAudioContext = new AudioContext();
+					const arrayBuffer = await file.arrayBuffer();
+					const decodedBuffer =
+						await localAudioContext.decodeAudioData(arrayBuffer);
+
+					const sampleRate = decodedBuffer.sampleRate;
+					const channelData = decodedBuffer.getChannelData(0);
+
+					// Copiamos el canal a un nuevo Float32Array para evitar mandar un buffer más grande
+					// o compartido internamente por el navegador.
+					const pcm = new Float32Array(channelData.length);
+					pcm.set(channelData);
+
+					if (statusText) {
+						statusText.textContent = "Analizando audio...";
+					}
+
+					showToast("Analizando audio...", "escaneando");
+					setResultLoading(
+						"Revisando si la voz parece humana o generada por IA.",
+					);
+
+					const response = await fetch(
+						`${API_URL}/audio/analyze?sample_rate=${sampleRate}`,
+						{
+							method: "POST",
+							headers: {
+								"Content-Type": "application/octet-stream",
+							},
+							body: pcm.buffer,
+						},
+					);
+					const result = await response.json();
+
+					await localAudioContext.close();
+
+					if (!response.ok) {
+						console.log("[Analyze Error]", result);
+						console.error("[Analyze Error]", result);
+						showToast(
+							result.error ?? "No se pudo analizar el archivo",
+							"error",
+						);
+
+						if (statusText) {
+							statusText.textContent = "Error al analizar archivo.";
+						}
+
+						return;
+					}
+
+					console.log("[Analyze Error]", result);
+
+					const probabilityAi = Number(result.probability_ai);
+					const probabilityHuman = Number(result.probability_human);
+					const segments = Number(result.segments_analyzed);
+					const threshold = Number(result.threshold);
+					const confidenceMargin = Number(result.confidence_margin);
+
+					console.log(
+						"[Analyze Result]",
+						JSON.stringify(
+							{
+								...result,
+								threshold,
+								confidence_margin: confidenceMargin,
+							},
+							null,
+							2,
+						),
+					);
+
+					updateResultCardFromAnalyze(result);
+
+					const uiClassification: VoiceUiClassification =
+						result.label === "ai" || result.label === "human"
+							? result.label
+							: classifyVoiceForUi(probabilityAi);
+
+					if (uiClassification === "ai") {
+						updateToastLive(
+							`DETECTED: AI Voice (${(probabilityAi * 100).toFixed(2)}%)`,
+						);
+					} else if (uiClassification === "human") {
+						updateToastLive(
+							`DETECTED: Human Voice (${(probabilityHuman * 100).toFixed(2)}%)`,
+						);
+					} else {
+						showToast(
+							"No está claro. Prueba con una voz más limpia o un audio más largo.",
+							"escaneando",
+						);
+					}
+
+					if (statusText) {
+						statusText.textContent = "Listo";
+					}
+				} catch (error) {
+					console.error("[File Analyze Error]", error);
+
+					showToast("No pude leer ese audio", "error");
+
+					if (statusText) {
+						statusText.textContent = "No se pudo analizar el audio.";
+					}
+				} finally {
+					target.value = "";
+				}
+			});
+		}
+	</script>
+</Layout>

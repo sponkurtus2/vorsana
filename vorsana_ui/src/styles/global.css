@@ -1,0 +1,7 @@
+/**
+ * Global application styles.
+ * Initializes Tailwind CSS.
+ */
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
