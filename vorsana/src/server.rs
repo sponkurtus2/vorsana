@@ -53,11 +53,6 @@ struct ErrorResponse {
 pub async fn start_server(addr: &str, engine: Arc<Mutex<InferenceEngine>>) {
     let state = Arc::new(AppState { engine });
 
-    let cors = CorsLayer::new()
-        .allow_origin("http://localhost:4321".parse::<HeaderValue>().unwrap())
-        .allow_methods([Method::GET, Method::POST])
-        .allow_headers(tower_http::cors::Any);
-
     let app = Router::new()
         .route("/ws", get(ws_handler))
         .route("/audio/analyze", post(analyze_audio_handler))
