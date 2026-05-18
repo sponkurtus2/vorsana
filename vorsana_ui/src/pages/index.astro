@@ -406,6 +406,8 @@ const WS_URL = import.meta.env.PUBLIC_WS_URL ?? "ws://127.0.0.1:3000/ws";
 		window.VORSANA_WS_URL = WS_URL;
 	</script>
 	<script>
+		const API_URL = import.meta.env.PUBLIC_API_URL ?? "http://127.0.0.1:3000";
+		const WS_URL = import.meta.env.PUBLIC_WS_URL ?? "ws://127.0.0.1:3000/ws";
 		const themeToggleBtn = document.getElementById("theme-toggle");
 		const darkIcon = document.getElementById("theme-toggle-dark-icon");
 		const lightIcon = document.getElementById("theme-toggle-light-icon");
